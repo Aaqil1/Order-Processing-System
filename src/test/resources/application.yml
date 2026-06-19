@@ -1,0 +1,20 @@
+# Test profile. The Postgres datasource is supplied by Testcontainers via
+# @ServiceConnection, so no URL is configured here.
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+
+# Park the scheduled job far in the future so it never auto-fires during tests;
+# tests invoke promotePendingOrders() explicitly when they want it to run.
+orders:
+  scheduler:
+    promote-pending:
+      initial-delay-ms: 3600000
+      fixed-rate-ms: 3600000
+
+logging:
+  level:
+    org.testcontainers: WARN
+    com.github.dockerjava: WARN

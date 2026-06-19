@@ -1,0 +1,404 @@
+{
+  "info": {
+    "name": "Order Processing System",
+    "description": "All manual test scenarios for the Order Processing System. Import this file into Postman. Set the `baseUrl` collection variable if your app is not on http://localhost:8080. Requests that need an order id read `{{orderId}}`, which is captured automatically by the 'Create' requests (so run a Create first, or use the Collection Runner top-to-bottom).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "orderId", "value": "" },
+    { "key": "idempotencyKey", "value": "" },
+    { "key": "idemOrderId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Create Order",
+      "item": [
+        {
+          "name": "Create order (multi-item) -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "const b = pm.response.json();",
+                  "pm.collectionVariables.set('orderId', b.id);",
+                  "pm.test('status is PENDING', () => pm.expect(b.status).to.eql('PENDING'));",
+                  "pm.test('total is 44.98', () => pm.expect(Number(b.totalAmount)).to.eql(44.98));",
+                  "pm.test('has 2 items', () => pm.expect(b.items.length).to.eql(2));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [\n    { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 2, \"unitPrice\": \"19.99\" },\n    { \"productId\": \"33333333-3333-3333-3333-333333333333\", \"quantity\": 1, \"unitPrice\": \"5.00\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Create order (single item) -> 201",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('orderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [\n    { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"9.99\" }\n  ]\n}"
+            }
+          }
+        },
+        {
+          "name": "Create - empty items -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": []\n}"
+            }
+          }
+        },
+        {
+          "name": "Create - quantity 0 -> 400",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('400 Bad Request', () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": {
+              "mode": "raw",
+              "options": { "raw": { "language": "json" } },
+              "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [\n    { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 0, \"unitPrice\": \"5.00\" }\n  ]\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Retrieve Order",
+      "item": [
+        {
+          "name": "Get order by id -> 200",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('200 OK', () => pm.response.to.have.status(200));",
+                  "pm.test('id matches', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('orderId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}"
+          }
+        },
+        {
+          "name": "Get unknown id -> 404",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('404 Not Found', () => pm.response.to.have.status(404));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/99999999-9999-9999-9999-999999999999"
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. List Orders",
+      "item": [
+        {
+          "name": "List all (paginated) -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?page=0&size=20"
+          }
+        },
+        {
+          "name": "List filter by status=PENDING -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?status=PENDING"
+          }
+        },
+        {
+          "name": "List status with no rows (DELIVERED) -> 200 empty",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?status=DELIVERED"
+          }
+        },
+        {
+          "name": "List size=1 (pagination) -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('size is 1', () => pm.expect(pm.response.json().size).to.eql(1));" ] } }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders?page=0&size=1"
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Update Status (state machine)",
+      "item": [
+        {
+          "name": "Setup: create a fresh PENDING order",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 Created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('orderId', pm.response.json().id);" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [ { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"9.99\" } ]\n}" }
+          }
+        },
+        {
+          "name": "PENDING -> PROCESSING -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('now PROCESSING', () => pm.expect(pm.response.json().status).to.eql('PROCESSING'));" ] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{ \"status\": \"PROCESSING\" }" }
+          }
+        },
+        {
+          "name": "PROCESSING -> SHIPPED -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));" ] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{ \"status\": \"SHIPPED\" }" }
+          }
+        },
+        {
+          "name": "SHIPPED -> DELIVERED -> 200",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('now DELIVERED', () => pm.expect(pm.response.json().status).to.eql('DELIVERED'));" ] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{ \"status\": \"DELIVERED\" }" }
+          }
+        },
+        {
+          "name": "Illegal: DELIVERED -> PROCESSING -> 409",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('409 Conflict', () => pm.response.to.have.status(409));" ] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{ \"status\": \"PROCESSING\" }" }
+          }
+        },
+        {
+          "name": "Setup: create another PENDING order (for skip test)",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 Created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('orderId', pm.response.json().id);" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [ { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"9.99\" } ]\n}" }
+          }
+        },
+        {
+          "name": "Illegal skip: PENDING -> SHIPPED -> 409",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('409 Conflict', () => pm.response.to.have.status(409));" ] } }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/status",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{ \"status\": \"SHIPPED\" }" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Cancel Order",
+      "item": [
+        {
+          "name": "Setup: create a fresh PENDING order",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('201 Created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('orderId', pm.response.json().id);" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [ { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"9.99\" } ]\n}" }
+          }
+        },
+        {
+          "name": "Cancel PENDING order -> 200 CANCELLED",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('200 OK', () => pm.response.to.have.status(200));", "pm.test('now CANCELLED', () => pm.expect(pm.response.json().status).to.eql('CANCELLED'));" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancel"
+          }
+        },
+        {
+          "name": "Cancel again -> 409",
+          "event": [
+            { "listen": "test", "script": { "type": "text/javascript", "exec": [ "pm.test('409 Conflict', () => pm.response.to.have.status(409));" ] } }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": "{{baseUrl}}/api/v1/orders/{{orderId}}/cancel"
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Idempotency",
+      "item": [
+        {
+          "name": "Create with Idempotency-Key (first) -> 201",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.collectionVariables.set('idempotencyKey', pm.variables.replaceIn('{{$guid}}'));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('201 Created', () => pm.response.to.have.status(201));",
+                  "pm.collectionVariables.set('idemOrderId', pm.response.json().id);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [ { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"1.00\" } ]\n}" }
+          }
+        },
+        {
+          "name": "Retry with SAME key -> same order id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('returns the original order id', () => pm.expect(pm.response.json().id).to.eql(pm.collectionVariables.get('idemOrderId')));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{idempotencyKey}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/orders",
+            "body": { "mode": "raw", "options": { "raw": { "language": "json" } }, "raw": "{\n  \"customerId\": \"11111111-1111-1111-1111-111111111111\",\n  \"items\": [ { \"productId\": \"22222222-2222-2222-2222-222222222222\", \"quantity\": 1, \"unitPrice\": \"1.00\" } ]\n}" }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-orders}
+      POSTGRES_USER: ${POSTGRES_USER:-orders}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-orders}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-orders} -d ${POSTGRES_DB:-orders}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  app:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-orders}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-orders}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-orders}
+      # Background-job interval in ms. Defaults to 5 minutes (300000). For manual
+      # testing, override it, e.g.:  ORDERS_PROMOTE_FIXED_RATE_MS=20000 docker compose up
+      ORDERS_PROMOTE_FIXED_RATE_MS: ${ORDERS_PROMOTE_FIXED_RATE_MS:-300000}
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 40s
+
+volumes:
+  pgdata:
